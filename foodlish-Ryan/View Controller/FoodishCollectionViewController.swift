@@ -15,13 +15,13 @@ class FoodishCollectionViewController: UICollectionViewController {
     var foods = [Food]()
     var foodImageArray = [URL]()
     
-    var a = [String]()
+    var tasks = [URLSessionTask]()
     
     
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        fetchDatas()
+        fetchData()
         
         navigationItem.title = "Ryan Chang"
         let barButtonItem = UIBarButtonItem(title: "", style: .done , target: self, action: nil)
@@ -43,45 +43,60 @@ class FoodishCollectionViewController: UICollectionViewController {
 
     
     
+    
+    
+    
     func fetchDatas(){
         print("fetchDatas")
-        foodImageArray.removeAll()
         print(foodNumber,"//////")
         for _ in 1 ... foodNumber {
             fetchData()
         }
         print("for end")
-//        DispatchQueue.main.async {
-//            print("reload")
-//            self.collectionView.reloadData()
-//        }
     }
+    
+    
     
     func fetchData() {
         print("fetchData")
         let str = "https://foodish-api.herokuapp.com/api/" //圖片網址
         if let url = URL(string: str){
-            URLSession.shared.dataTask(with: url) { data, response, error in
-                let decoder = JSONDecoder()
-                if let data = data {
-                    do {
-                        let fo = try decoder.decode(Food.self, from: data)
-                        self.foods = [fo]
-                        let imageurl = self.foods.first?.image
-                       
-                        self.foodImageArray.append(imageurl!)
-                        print(self.foodImageArray)
-                        
-                    } catch  {
-                        print("error")
+            for _ in 1 ... foodNumber {
+                let task = URLSession.shared.dataTask(with: url) {[weak self] data, response, error in
+                    let decoder = JSONDecoder()
+                    if let data = data {
+                        do {
+                            let fo = try decoder.decode(Food.self, from: data)
+                            self?.foods = [fo]
+                            let imageurl = self?.foods.first?.image
+                            DispatchQueue.main.async {
+                                self?.foodImageArray.append(imageurl!)
+                                print("reloadData")
+                                self?.collectionView.reloadData()
+                            }
+                        } catch  {
+                            print("error")
+                        }
                     }
                 }
-            }.resume()
+                
+                
+                
+                task.resume()
+                tasks.append(task)
+                print(tasks)
+            }
         }
     }
     
-    
 
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        for i in 0 ..< foodNumber{
+            print("cancel")
+            tasks[i].cancel()
+        }
+    }
     
     /*
     // MARK: - Navigation
@@ -113,8 +128,7 @@ class FoodishCollectionViewController: UICollectionViewController {
      
         print(foodImageArray.count)
         print(foodImageArray)
-//        print(item)
-        
+
         //fetch Images (PhotoWall)
         URLSession.shared.dataTask(with: item) { data, response, error in
             if let data = data {
